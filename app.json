@@ -1,8 +1,7 @@
 {
   "pages": [
     "pages/start/start",
-    "pages/wifi_station/tianqi/tianqi",
-    "pages/wifi_station/index/index"
+    "pages/wifi_station/tianqi/tianqi"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -11,5 +10,5 @@
     "navigationBarTextStyle": "black",
     "enablePullDownRefresh": true
   },
-  "debug": true
+  "debug": false
 }

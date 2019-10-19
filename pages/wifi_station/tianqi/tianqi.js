@@ -1,30 +1,142 @@
 var myCharts = require("../../../utils/wxcharts.js")//引入一个绘图的插件
-var lineChart_hum = null
-var lineChart_light = null
-var lineChart_tempe = null
-var app = getApp()
+
+const devicesId = "替换为你的设备ID" // 填写在OneNet上获得的devicesId 形式就是一串数字 例子:9939133
+const api_key = "replace with your api-key" // 填写在OneNet上的 api-key 例子: VeFI0HZ44Qn5dZO14AuLbWSlSlI=
 
 Page({
-  data: {
-  },
+  data: {},
+
+  /**
+   * @description 页面下拉刷新事件
+   */
   onPullDownRefresh: function () {
-    console.log('onPullDownRefresh', new Date())
+    wx.showLoading({
+      title: "正在获取"
+    })
+    this.getDatapoints().then(datapoints => {
+      this.update(datapoints)
+      wx.hideLoading()
+    }).catch((err) => {
+      wx.hideLoading()
+      console.error(error)
+    })
   },
 
+  /**
+   * @description 页面加载生命周期
+   */
+  onLoad: function () {
+    console.log(`your deviceId: ${devicesId}, apiKey: ${api_key}`)
 
-  //把拿到的数据转换成绘图插件需要的输入格式
-  convert: function () {
+    //每隔6s自动获取一次数据进行更新
+    const timer = setInterval(() => {
+      this.getDatapoints().then(datapoints => {
+        this.update(datapoints)
+      })
+    }, 6000)
+
+    wx.showLoading({
+      title: '加载中'
+    })
+
+    this.getDatapoints().then((datapoints) => {
+      wx.hideLoading()
+      this.firstDraw(datapoints)
+    }).catch((err) => {
+      wx.hideLoading()
+      console.error(err)
+      clearInterval(timer) //首次渲染发生错误时禁止自动刷新
+    })
+  },
+
+  /**
+   * 向OneNet请求当前设备的数据点
+   * @returns Promise
+   */
+  getDatapoints: function () {
+    return new Promise((resolve, reject) => {
+      wx.request({
+        url: `https://api.heclouds.com/devices/${devicesId}/datapoints?datastream_id=Light,Temperature,Humidity&limit=20`,
+        header: {
+          'content-type': 'application/json',
+          'api-key': api_key
+        },
+        success: (res) => {
+          const status = res.statusCode
+          const response = res.data
+          if (status !== 200) {
+            reject(res.data)
+          }
+          if (response.errno !== 0) {
+            reject(response.error)
+          }
+
+          resolve({
+            temperature: response.data.datastreams[0].datapoints.reverse(),
+            light: response.data.datastreams[1].datapoints.reverse(),
+            humidity: response.data.datastreams[2].datapoints.reverse()
+          })
+        },
+        fail: (err) => {
+          reject(err)
+        }
+      })
+    })
+  },
+
+  /**
+   * @param {Object[]} datapoints 从OneNet云平台上获取到的数据点
+   * 传入获取到的数据点, 函数自动更新图标
+   */
+  update: function (datapoints) {
+    const wheatherData = this.convert(datapoints);
+
+    this.lineChart_hum.updateData({
+      categories: wheatherData.categories,
+      series: [{
+        name: 'humidity',
+        data: wheatherData.humidity,
+        format: (val, name) => val.toFixed(2)
+      }],
+    })
+
+    this.lineChart_light.updateData({
+      categories: wheatherData.categories,
+      series: [{
+        name: 'light',
+        data: wheatherData.light,
+        format: (val, name) => val.toFixed(2)
+      }],
+    })
+
+    this.lineChart_tempe.updateData({
+      categories: wheatherData.categories,
+      series: [{
+        name: 'tempe',
+        data: wheatherData.tempe,
+        format: (val, name) => val.toFixed(2)
+      }],
+    })
+
+  },
+
+  /**
+   * 
+   * @param {Object[]} datapoints 从OneNet云平台上获取到的数据点
+   * 传入数据点, 返回使用于图表的数据格式
+   */
+  convert: function (datapoints) {
     var categories = [];
     var humidity = [];
     var light = [];
     var tempe = [];
 
-    var length = app.globalData.light.datapoints.length
+    var length = datapoints.humidity.length
     for (var i = 0; i < length; i++) {
-      categories.push(app.globalData.humidity.datapoints[i].at.slice(11,19));
-      humidity.push(app.globalData.humidity.datapoints[i].value);
-      light.push(app.globalData.light.datapoints[i].value);
-      tempe.push(app.globalData.temperature.datapoints[i].value);
+      categories.push(datapoints.humidity[i].at.slice(5, 19));
+      humidity.push(datapoints.humidity[i].value);
+      light.push(datapoints.light[i].value);
+      tempe.push(datapoints.temperature[i].value);
     }
     return {
       categories: categories,
@@ -34,9 +146,13 @@ Page({
     }
   },
 
-  onLoad: function () {
-    var wheatherData = this.convert();
-    
+  /**
+   * 
+   * @param {Object[]} datapoints 从OneNet云平台上获取到的数据点
+   * 传入数据点, 函数将进行图表的初始化渲染
+   */
+  firstDraw: function (datapoints) {
+
     //得到屏幕宽度
     var windowWidth = 320;
     try {
@@ -46,14 +162,14 @@ Page({
       console.error('getSystemInfoSync failed!');
     }
 
-    var wheatherData = this.convert();
+    var wheatherData = this.convert(datapoints);
 
     //新建湿度图表
-    lineChart_hum = new myCharts({
+    this.lineChart_hum = new myCharts({
       canvasId: 'humidity',
       type: 'line',
       categories: wheatherData.categories,
-      animation: true,
+      animation: false,
       background: '#f5f5f5',
       series: [{
         name: 'humidity',
@@ -69,8 +185,7 @@ Page({
         title: 'humidity (%)',
         format: function (val) {
           return val.toFixed(2);
-        },
-        min: 55
+        }
       },
       width: windowWidth,
       height: 200,
@@ -80,13 +195,12 @@ Page({
         lineStyle: 'curve'
       }
     });
-
-  //新建光照强度图表
-    lineChart_light = new myCharts({
+    // 新建光照强度图表
+    this.lineChart_light = new myCharts({
       canvasId: 'light',
       type: 'line',
       categories: wheatherData.categories,
-      animation: true,
+      animation: false,
       background: '#f5f5f5',
       series: [{
         name: 'light',
@@ -102,8 +216,7 @@ Page({
         title: 'light (lux)',
         format: function (val) {
           return val.toFixed(2);
-        },
-        min: 190
+        }
       },
       width: windowWidth,
       height: 200,
@@ -115,11 +228,11 @@ Page({
     });
 
     //新建温度图表
-    lineChart_tempe = new myCharts({
+    this.lineChart_tempe = new myCharts({
       canvasId: 'tempe',
       type: 'line',
       categories: wheatherData.categories,
-      animation: true,
+      animation: false,
       background: '#f5f5f5',
       series: [{
         name: 'temperature',
@@ -135,8 +248,7 @@ Page({
         title: 'temperature (摄氏度)',
         format: function (val) {
           return val.toFixed(2);
-        },
-        min: 24
+        }
       },
       width: windowWidth,
       height: 200,
@@ -147,6 +259,4 @@ Page({
       }
     });
   },
-
-  
 })
