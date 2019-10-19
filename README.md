@@ -1,3 +1,3 @@
-# miniprogram_2
+# miniprogram-OneNet
 
-小程序前端代码（登录验证+百度天气+OneNet）
+小程序获取OneNet云平台上数据点并展示为图表
