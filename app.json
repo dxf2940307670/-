@@ -5,10 +5,11 @@
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "white",
+    "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTitleText": "Wi-Fi 气象站",
     "navigationBarTextStyle": "black",
     "enablePullDownRefresh": true
   },
-  "debug": false
+  "debug": false,
+  "sitemapLocation": "sitemap.json"
 }
