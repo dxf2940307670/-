@@ -1,6 +1,6 @@
 var myCharts = require("../../../utils/wxcharts.js")//引入一个绘图的插件
 
-const devicesId = "替换为你的设备ID" // 填写在OneNet上获得的devicesId 形式就是一串数字 例子:9939133
+const devicesId = "562221556" // 填写在OneNet上获得的devicesId 形式就是一串数字 例子:9939133
 const api_key = "replace with your api-key" // 填写在OneNet上的 api-key 例子: VeFI0HZ44Qn5dZO14AuLbWSlSlI=
 
 Page({
@@ -80,8 +80,7 @@ Page({
           }
 
           if (response.data.datastreams.length === 0) {
-            reject(response.data)
-            return ;
+            reject("当前设备无数据, 请先运行硬件实验")
           }
 
           //程序可以运行到这里说明请求成功, 将Promise置为resolve状态
