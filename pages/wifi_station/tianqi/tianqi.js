@@ -79,7 +79,7 @@ Page({
             return ;
           }
 
-          if (response.data.datapoints.length === 0) {
+          if (response.data.datastreams.length === 0) {
             reject(response.data)
             return ;
           }
